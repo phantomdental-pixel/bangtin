@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bảng tin">
+<title>Bảng tin</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0b0d10; color: #e8e6e1; overflow: hidden;
+    font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif;
+    -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: rgba(0,0,0,0);
+    -webkit-text-size-adjust: 100%; }
+  #app { position: absolute; top: 0; left: 0; right: 0; bottom: 0; padding: 26px 34px 22px;
+    box-sizing: border-box; display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column;
+    -webkit-transition: opacity 2s; transition: opacity 2s; }
+  #app.night { opacity: 0.42; }
+  .num { font-variant-numeric: tabular-nums; -webkit-font-feature-settings: "tnum"; font-feature-settings: "tnum"; }
+  .muted { color: #8a8f98; }
+  .accent { color: #f2b25c; }
+
+  .top { -webkit-flex: 1; flex: 1; display: -webkit-flex; display: flex; min-height: 0; }
+  .left { -webkit-flex: 1.4; flex: 1.4; display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column; -webkit-justify-content: center; justify-content: center; }
+  .right { -webkit-flex: 1; flex: 1; border-left: 1px solid #1f242b; padding-left: 30px; display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column; -webkit-justify-content: center; justify-content: center; }
+
+  .clock { font-size: 16vw; font-weight: 200; line-height: 0.95; letter-spacing: -0.03em; white-space: nowrap; }
+  .clock .sec { font-size: 0.22em; font-weight: 300; letter-spacing: 0; color: #5d636c; margin-left: 0.15em; vertical-align: 0.15em; }
+  .date { font-size: 2.9vw; font-weight: 400; margin-top: 14px; }
+  .lunar { font-size: 2vw; margin-top: 6px; }
+
+  .city { font-size: 1.75vw; letter-spacing: 0.08em; text-transform: uppercase; display: inline-block; padding: 6px 0; }
+  .city:after { content: " \25BE"; color: #5d636c; }
+  .now { display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; margin-top: 4px; }
+  .now .icon { font-size: 6vw; margin-right: 14px; }
+  .now .temp { font-size: 7.5vw; font-weight: 200; line-height: 1; }
+  .desc { font-size: 2.1vw; margin-top: 4px; }
+  .meta { font-size: 1.6vw; margin-top: 8px; line-height: 1.5; }
+  .hours { display: -webkit-flex; display: flex; margin-top: 18px; }
+  .hours .h { -webkit-flex: 1; flex: 1; text-align: center; font-size: 1.55vw; }
+  .hours .h .i { font-size: 2.6vw; margin: 3px 0; }
+  .status { font-size: 1.4vw; margin-top: 10px; min-height: 1.4em; }
+
+  .bottom { height: 22%; min-height: 130px; border-top: 1px solid #1f242b; margin-top: 16px; padding-top: 14px; display: -webkit-flex; display: flex; }
+  .days { -webkit-flex: 1.4; flex: 1.4; display: -webkit-flex; display: flex; }
+  .days .d { -webkit-flex: 1; flex: 1; text-align: center; font-size: 1.7vw; display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column; -webkit-justify-content: center; justify-content: center; }
+  .days .d .i { font-size: 3.2vw; margin: 4px 0; }
+  .days .d .rain { font-size: 1.35vw; color: #6fa8dc; }
+
+  .pomo { -webkit-flex: 1; flex: 1; border-left: 1px solid #1f242b; padding-left: 30px; display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; }
+  .pomo .left2 { -webkit-flex: 1; flex: 1; }
+  .pomo .mode { font-size: 1.45vw; letter-spacing: 0.08em; text-transform: uppercase; }
+  .pomo .time { font-size: 6vw; font-weight: 200; line-height: 1.05; }
+  .pomo .count { font-size: 1.35vw; }
+  .btn { display: inline-block; border: 1px solid #353b44; border-radius: 999px; padding: 10px 18px; font-size: 1.6vw; margin: 4px 0 4px 8px; color: #e8e6e1; text-align: center; min-width: 7vw; }
+  .btn.main { border-color: #f2b25c; color: #f2b25c; }
+  .btn:active { background: #1c2027; }
+  #app.ring .pomo { -webkit-animation: flash 1s 6; animation: flash 1s 6; }
+  @-webkit-keyframes flash { 50% { background: #3a2a10; } }
+  @keyframes flash { 50% { background: #3a2a10; } }
+
+  /* city picker */
+  #picker { display: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(5,6,8,0.96); z-index: 10; padding: 40px; box-sizing: border-box; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  #picker.show { display: block; }
+  #picker h2 { font-weight: 300; font-size: 30px; margin: 0 0 6px; }
+  #picker p { margin: 0 0 22px; font-size: 17px; }
+  #picker .grid { display: -webkit-flex; display: flex; -webkit-flex-wrap: wrap; flex-wrap: wrap; }
+  #picker .c { width: 30%; margin: 0 3% 12px 0; padding: 16px 0; border: 1px solid #2a3038; border-radius: 12px; text-align: center; font-size: 20px; }
+  #picker .c.sel { border-color: #f2b25c; color: #f2b25c; }
+  #picker .c:active { background: #1c2027; }
+
+  /* portrait */
+  @media (orientation: portrait) {
+    .top { -webkit-flex-direction: column; flex-direction: column; }
+    .right { border-left: 0; padding-left: 0; border-top: 1px solid #1f242b; padding-top: 18px; margin-top: 18px; }
+    .clock { font-size: 24vw; }
+    .date { font-size: 4.4vw; } .lunar { font-size: 3.2vw; }
+    .city { font-size: 2.6vw; } .now .icon { font-size: 9vw; } .now .temp { font-size: 11vw; }
+    .desc { font-size: 3.2vw; } .meta { font-size: 2.5vw; } .hours .h { font-size: 2.4vw; } .hours .h .i { font-size: 4vw; }
+    .status { font-size: 2.2vw; }
+    .bottom { height: 18%; }
+    .days .d { font-size: 2.5vw; } .days .d .i { font-size: 4.6vw; } .days .d .rain { font-size: 2vw; }
+    .pomo .mode, .pomo .count { font-size: 2.2vw; } .pomo .time { font-size: 8.5vw; } .btn { font-size: 2.4vw; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="top">
+    <div class="left">
+      <div class="clock num"><span id="hm">--:--</span><span class="sec" id="ss">--</span></div>
+      <div class="date" id="date"></div>
+      <div class="lunar muted" id="lunar"></div>
+    </div>
+    <div class="right">
+      <div><span class="city muted" id="city">Chọn thành phố</span></div>
+      <div class="now"><span class="icon" id="wIcon"></span><span class="temp num" id="wTemp">--°</span></div>
+      <div class="desc" id="wDesc"></div>
+      <div class="meta muted" id="wMeta"></div>
+      <div class="hours" id="hours"></div>
+      <div class="status muted" id="status"></div>
+    </div>
+  </div>
+  <div class="bottom">
+    <div class="days" id="days"></div>
+    <div class="pomo">
+      <div class="left2">
+        <div class="mode accent" id="pMode">Tập trung</div>
+        <div class="time num" id="pTime">25:00</div>
+        <div class="count muted" id="pCount">Hôm nay: 0 phiên</div>
+      </div>
+      <div>
+        <div><span class="btn main" id="pStart">Bắt đầu</span></div>
+        <div><span class="btn" id="pSwitch">Nghỉ 5'</span></div>
+        <div><span class="btn" id="pReset">Đặt lại</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="picker">
+  <h2>Chọn thành phố</h2>
+  <p class="muted">Để lấy thời tiết. Có thể đổi lại bất cứ lúc nào bằng cách chạm vào tên thành phố.</p>
+  <div class="grid" id="cityGrid"></div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var TZ = 7; // Giờ Việt Nam, dùng cho lịch âm
+  var NIGHT_FROM = 22, NIGHT_TO = 6; // làm tối màn hình ban đêm
+
+  function $(id) { return document.getElementById(id); }
+  function pad(n) { return n < 10 ? "0" + n : "" + n; }
+  function store(k, v) { try { if (v === undefined) return window.localStorage.getItem(k); window.localStorage.setItem(k, v); } catch (e) { return null; } }
+
+  /* ---------- Lịch âm (thuật toán Hồ Ngọc Đức) ---------- */
+  var INT = Math.floor, PI = Math.PI;
+  function jdFromDate(dd, mm, yy) {
+    var a = INT((14 - mm) / 12), y = yy + 4800 - a, m = mm + 12 * a - 3;
+    var jd = dd + INT((153 * m + 2) / 5) + 365 * y + INT(y / 4) - INT(y / 100) + INT(y / 400) - 32045;
+    if (jd < 2299161) jd = dd + INT((153 * m + 2) / 5) + 365 * y + INT(y / 4) - 32083;
+    return jd;
+  }
+  function getNewMoonDay(k, tz) {
+    var T = k / 1236.85, T2 = T * T, T3 = T2 * T, dr = PI / 180;
+    var Jd1 = 2415020.75933 + 29.53058868 * k + 0.0001178 * T2 - 0.000000155 * T3;
+    Jd1 = Jd1 + 0.00033 * Math.sin((166.56 + 132.87 * T - 0.009173 * T2) * dr);
+    var M = 359.2242 + 29.10535608 * k - 0.0000333 * T2 - 0.00000347 * T3;
+    var Mpr = 306.0253 + 385.81691806 * k + 0.0107306 * T2 + 0.00001236 * T3;
+    var F = 21.2964 + 390.67050646 * k - 0.0016528 * T2 - 0.00000239 * T3;
+    var C1 = (0.1734 - 0.000393 * T) * Math.sin(M * dr) + 0.0021 * Math.sin(2 * dr * M);
+    C1 = C1 - 0.4068 * Math.sin(Mpr * dr) + 0.0161 * Math.sin(dr * 2 * Mpr);
+    C1 = C1 - 0.0004 * Math.sin(dr * 3 * Mpr);
+    C1 = C1 + 0.0104 * Math.sin(dr * 2 * F) - 0.0051 * Math.sin(dr * (M + Mpr));
+    C1 = C1 - 0.0074 * Math.sin(dr * (M - Mpr)) + 0.0004 * Math.sin(dr * (2 * F + M));
+    C1 = C1 - 0.0004 * Math.sin(dr * (2 * F - M)) - 0.0006 * Math.sin(dr * (2 * F + Mpr));
+    C1 = C1 + 0.0010 * Math.sin(dr * (2 * F - Mpr)) + 0.0005 * Math.sin(dr * (2 * Mpr + M));
+    var deltat = T < -11 ? 0.001 + 0.000839 * T + 0.0002261 * T2 - 0.00000845 * T3 - 0.000000081 * T * T3
+                         : -0.000278 + 0.000265 * T + 0.000262 * T2;
+    return INT(Jd1 + C1 - deltat + 0.5 + tz / 24);
+  }
+  function getSunLongitude(jdn, tz) {
+    var T = (jdn - 2451545.5 - tz / 24) / 36525, T2 = T * T, dr = PI / 180;
+    var M = 357.52910 + 35999.05030 * T - 0.0001559 * T2 - 0.00000048 * T * T2;
+    var L0 = 280.46645 + 36000.76983 * T + 0.0003032 * T2;
+    var DL = (1.914600 - 0.004817 * T - 0.000014 * T2) * Math.sin(dr * M);
+    DL = DL + (0.019993 - 0.000101 * T) * Math.sin(dr * 2 * M) + 0.000290 * Math.sin(dr * 3 * M);
+    var L = (L0 + DL) * dr;
+    L = L - PI * 2 * INT(L / (PI * 2));
+    return INT(L / PI * 6);
+  }
+  function getLunarMonth11(yy, tz) {
+    var off = jdFromDate(31, 12, yy) - 2415021, k = INT(off / 29.530588853);
+    var nm = getNewMoonDay(k, tz);
+    if (getSunLongitude(nm, tz) >= 9) nm = getNewMoonDay(k - 1, tz);
+    return nm;
+  }
+  function getLeapMonthOffset(a11, tz) {
+    var k = INT((a11 - 2415021.076998695) / 29.530588853 + 0.5), last, i = 1;
+    var arc = getSunLongitude(getNewMoonDay(k + i, tz), tz);
+    do { last = arc; i++; arc = getSunLongitude(getNewMoonDay(k + i, tz), tz); } while (arc !== last && i < 14);
+    return i - 1;
+  }
+  function solarToLunar(dd, mm, yy, tz) {
+    var dayNumber = jdFromDate(dd, mm, yy);
+    var k = INT((dayNumber - 2415021.076998695) / 29.530588853);
+    var monthStart = getNewMoonDay(k + 1, tz);
+    if (monthStart > dayNumber) monthStart = getNewMoonDay(k, tz);
+    var a11 = getLunarMonth11(yy, tz), b11 = a11, lunarYear;
+    if (a11 >= monthStart) { lunarYear = yy; a11 = getLunarMonth11(yy - 1, tz); }
+    else { lunarYear = yy + 1; b11 = getLunarMonth11(yy + 1, tz); }
+    var lunarDay = dayNumber - monthStart + 1;
+    var diff = INT((monthStart - a11) / 29), lunarLeap = 0, lunarMonth = diff + 11;
+    if (b11 - a11 > 365) {
+      var leapDiff = getLeapMonthOffset(a11, tz);
+      if (diff >= leapDiff) { lunarMonth = diff + 10; if (diff === leapDiff) lunarLeap = 1; }
+    }
+    if (lunarMonth > 12) lunarMonth -= 12;
+    if (lunarMonth >= 11 && diff < 4) lunarYear -= 1;
+    return { d: lunarDay, m: lunarMonth, y: lunarYear, leap: lunarLeap };
+  }
+  var CAN = ["Giáp", "Ất", "Bính", "Đinh", "Mậu", "Kỷ", "Canh", "Tân", "Nhâm", "Quý"];
+  var CHI = ["Tý", "Sửu", "Dần", "Mão", "Thìn", "Tỵ", "Ngọ", "Mùi", "Thân", "Dậu", "Tuất", "Hợi"];
+  function canChiYear(y) { return CAN[(y + 6) % 10] + " " + CHI[(y + 8) % 12]; }
+  var MONTH_NAME = ["", "Giêng", "Hai", "Ba", "Tư", "Năm", "Sáu", "Bảy", "Tám", "Chín", "Mười", "Một", "Chạp"];
+
+  /* ---------- Đồng hồ ---------- */
+  var THU = ["Chủ nhật", "Thứ hai", "Thứ ba", "Thứ tư", "Thứ năm", "Thứ sáu", "Thứ bảy"];
+  var lastDay = -1;
+  function tick() {
+    var now = new Date();
+    $("hm").innerHTML = pad(now.getHours()) + ":" + pad(now.getMinutes());
+    $("ss").innerHTML = pad(now.getSeconds());
+    if (now.getDate() !== lastDay) {
+      lastDay = now.getDate();
+      $("date").innerHTML = THU[now.getDay()] + ", " + now.getDate() + " tháng " + (now.getMonth() + 1) + ", " + now.getFullYear();
+      var L = solarToLunar(now.getDate(), now.getMonth() + 1, now.getFullYear(), TZ);
+      $("lunar").innerHTML = "Âm lịch: ngày " + L.d + " tháng " + MONTH_NAME[L.m] + (L.leap ? " (nhuận)" : "") +
+        " năm " + canChiYear(L.y);
+      resetPomoCountIfNewDay();
+    }
+    var h = now.getHours();
+    var night = (NIGHT_FROM > NIGHT_TO) ? (h >= NIGHT_FROM || h < NIGHT_TO) : (h >= NIGHT_FROM && h < NIGHT_TO);
+    $("app").className = (night ? "night" : "") + (ringing ? " ring" : "");
+    // Tải lại trang lúc 3:00 sáng để máy cũ chạy ổn định lâu dài
+    if (h === 3 && now.getMinutes() === 0 && now.getSeconds() < 2) { window.location.reload(); }
+    setTimeout(tick, 1000 - now.getMilliseconds() + 5);
+  }
+
+  /* ---------- Thời tiết (Open-Meteo, miễn phí, không cần khóa) ---------- */
+  var CITIES = [
+    ["Hà Nội", 21.0285, 105.8542], ["TP. Hồ Chí Minh", 10.7769, 106.7009], ["Đà Nẵng", 16.0544, 108.2022],
+    ["Hải Phòng", 20.8449, 106.6881], ["Cần Thơ", 10.0452, 105.7469], ["Huế", 16.4637, 107.5909],
+    ["Nha Trang", 12.2388, 109.1967], ["Đà Lạt", 11.9404, 108.4583], ["Vũng Tàu", 10.3460, 107.0843],
+    ["Quy Nhơn", 13.7820, 109.2190], ["Vinh", 18.6796, 105.6813], ["Buôn Ma Thuột", 12.6667, 108.0500],
+    ["Biên Hòa", 10.9574, 106.8426], ["Thủ Dầu Một", 10.9804, 106.6519], ["Nam Định", 20.4388, 106.1621],
+    ["Long Xuyên", 10.3864, 105.4352], ["Hạ Long", 20.9599, 107.0425], ["Phan Thiết", 10.9289, 108.1021]
+  ];
+  var city = null;
+  try { city = JSON.parse(store("city") || "null"); } catch (e) { city = null; }
+
+  var WMO = {
+    0: ["Trời quang", "☀️", "🌙"], 1: ["Ít mây", "🌤", "🌙"], 2: ["Có mây", "⛅️", "☁️"], 3: ["Nhiều mây", "☁️", "☁️"],
+    45: ["Sương mù", "🌫", "🌫"], 48: ["Sương mù", "🌫", "🌫"],
+    51: ["Mưa phùn nhẹ", "🌦", "🌧"], 53: ["Mưa phùn", "🌦", "🌧"], 55: ["Mưa phùn dày", "🌧", "🌧"],
+    56: ["Mưa phùn lạnh", "🌧", "🌧"], 57: ["Mưa phùn lạnh", "🌧", "🌧"],
+    61: ["Mưa nhỏ", "🌦", "🌧"], 63: ["Mưa vừa", "🌧", "🌧"], 65: ["Mưa to", "🌧", "🌧"],
+    66: ["Mưa lạnh", "🌧", "🌧"], 67: ["Mưa lạnh to", "🌧", "🌧"],
+    71: ["Tuyết nhẹ", "🌨", "🌨"], 73: ["Tuyết", "🌨", "🌨"], 75: ["Tuyết dày", "🌨", "🌨"], 77: ["Tuyết hạt", "🌨", "🌨"],
+    80: ["Mưa rào nhẹ", "🌦", "🌧"], 81: ["Mưa rào", "🌧", "🌧"], 82: ["Mưa rào rất to", "⛈", "⛈"],
+    85: ["Tuyết rào", "🌨", "🌨"], 86: ["Tuyết rào", "🌨", "🌨"],
+    95: ["Dông", "⛈", "⛈"], 96: ["Dông, mưa đá", "⛈", "⛈"], 99: ["Dông, mưa đá", "⛈", "⛈"]
+  };
+  function wmo(code, isDay) { var w = WMO[code] || ["—", "·", "·"]; return { text: w[0], icon: isDay === 0 ? w[2] : w[1] }; }
+
+  function getJSON(url, ok, fail) {
+    var x = new XMLHttpRequest();
+    x.open("GET", url, true);
+    x.timeout = 20000;
+    x.onreadystatechange = function () {
+      if (x.readyState !== 4) return;
+      if (x.status === 200) { try { ok(JSON.parse(x.responseText)); } catch (e) { fail(); } } else { fail(); }
+    };
+    x.ontimeout = fail;
+    x.send();
+  }
+
+  var lastOk = 0;
+  function loadWeather() {
+    if (!city) return;
+    $("city").innerHTML = city.name;
+    var url = "https://api.open-meteo.com/v1/forecast?latitude=" + city.lat + "&longitude=" + city.lon +
+      "&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,is_day" +
+      "&hourly=temperature_2m,weather_code,precipitation_probability,is_day" +
+      "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max" +
+      "&timezone=Asia%2FHo_Chi_Minh&forecast_days=5";
+    getJSON(url, function (d) { renderWeather(d); lastOk = Date.now(); $("status").innerHTML = "Cập nhật lúc " + d.current.time.substr(11, 5); },
+      function () {
+        var msg = "Không tải được thời tiết, sẽ thử lại";
+        if (lastOk) msg += " · dữ liệu cũ từ " + Math.round((Date.now() - lastOk) / 60000) + " phút trước";
+        $("status").innerHTML = msg;
+      });
+  }
+
+  function renderWeather(d) {
+    var c = d.current, w = wmo(c.weather_code, c.is_day);
+    $("wIcon").innerHTML = w.icon;
+    $("wTemp").innerHTML = Math.round(c.temperature_2m) + "°";
+    $("wDesc").innerHTML = w.text;
+    $("wMeta").innerHTML = "Cảm giác " + Math.round(c.apparent_temperature) + "° · Độ ẩm " + c.relative_humidity_2m +
+      "% · Gió " + Math.round(c.wind_speed_10m) + " km/h";
+
+    // 6 giờ tới (so khớp chuỗi thời gian, không phụ thuộc cách Safari đọc ngày)
+    var H = d.hourly, key = c.time.substr(0, 13), start = 0, i;
+    for (i = 0; i < H.time.length; i++) { if (H.time[i].substr(0, 13) === key) { start = i + 1; break; } }
+    var html = "";
+    for (i = start; i < start + 6 && i < H.time.length; i++) {
+      var hw = wmo(H.weather_code[i], H.is_day[i]);
+      html += '<div class="h"><div class="muted">' + H.time[i].substr(11, 2) + 'h</div><div class="i">' + hw.icon +
+        '</div><div class="num">' + Math.round(H.temperature_2m[i]) + '°</div></div>';
+    }
+    $("hours").innerHTML = html;
+
+    // 4 ngày tới
+    var D = d.daily; html = "";
+    for (i = 1; i < D.time.length && i <= 4; i++) {
+      var p = D.time[i].split("-"), dt = new Date(+p[0], +p[1] - 1, +p[2]);
+      var dw = wmo(D.weather_code[i], 1);
+      var label = i === 1 ? "Ngày mai" : THU[dt.getDay()].replace("Thứ ", "Th ").replace("Chủ nhật", "CN");
+      html += '<div class="d"><div class="muted">' + label + '</div><div class="i">' + dw.icon + '</div><div class="num">' +
+        Math.round(D.temperature_2m_max[i]) + '° <span class="muted">' + Math.round(D.temperature_2m_min[i]) + '°</span></div>' +
+        '<div class="rain num">' + (D.precipitation_probability_max[i] != null ? "💧" + D.precipitation_probability_max[i] + "%" : "") + '</div></div>';
+    }
+    $("days").innerHTML = html;
+  }
+
+  function buildPicker() {
+    var html = "", i;
+    for (i = 0; i < CITIES.length; i++) {
+      var sel = city && city.name === CITIES[i][0] ? " sel" : "";
+      html += '<div class="c' + sel + '" data-i="' + i + '">' + CITIES[i][0] + '</div>';
+    }
+    $("cityGrid").innerHTML = html;
+  }
+  function openPicker() { buildPicker(); $("picker").className = "show"; }
+  $("cityGrid").addEventListener("click", function (e) {
+    var t = e.target; if (!t.getAttribute || t.getAttribute("data-i") === null) return;
+    var c = CITIES[+t.getAttribute("data-i")];
+    city = { name: c[0], lat: c[1], lon: c[2] };
+    store("city", JSON.stringify(city));
+    $("picker").className = "";
+    $("status").innerHTML = "Đang tải thời tiết…";
+    loadWeather();
+  }, false);
+  $("city").addEventListener("click", openPicker, false);
+
+  /* ---------- Pomodoro ---------- */
+  var FOCUS = 25 * 60, BREAK = 5 * 60;
+  var mode = "focus", left = FOCUS, running = false, endAt = 0, pTimer = null, ringing = false, audioCtx = null;
+  function pomoCount(v) {
+    var today = new Date().toDateString();
+    if (v === undefined) { return store("pomoDay") === today ? (+store("pomoN") || 0) : 0; }
+    store("pomoDay", today); store("pomoN", "" + v);
+  }
+  function resetPomoCountIfNewDay() { $("pCount").innerHTML = "Hôm nay: " + pomoCount() + " phiên"; }
+  function drawPomo() {
+    var s = Math.max(0, Math.round(left));
+    $("pTime").innerHTML = pad(INT(s / 60)) + ":" + pad(s % 60);
+    $("pMode").innerHTML = mode === "focus" ? "Tập trung" : "Nghỉ ngơi";
+    $("pStart").innerHTML = running ? "Tạm dừng" : (left < (mode === "focus" ? FOCUS : BREAK) ? "Tiếp tục" : "Bắt đầu");
+    $("pSwitch").innerHTML = mode === "focus" ? "Nghỉ 5'" : "Tập trung";
+  }
+  function beep() {
+    try {
+      if (!audioCtx) return;
+      var t = audioCtx.currentTime, k;
+      for (k = 0; k < 3; k++) {
+        var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.frequency.value = 880; o.connect(g); g.connect(audioCtx.destination);
+        g.gain.setValueAtTime(0.0001, t + k * 0.6);
+        g.gain.exponentialRampToValueAtTime(0.3, t + k * 0.6 + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + k * 0.6 + 0.45);
+        o.start(t + k * 0.6); o.stop(t + k * 0.6 + 0.5);
+      }
+    } catch (e) {}
+  }
+  function pomoTick() {
+    left = (endAt - Date.now()) / 1000;
+    if (left <= 0) {
+      running = false; clearInterval(pTimer);
+      if (mode === "focus") { pomoCount(pomoCount() + 1); resetPomoCountIfNewDay(); }
+      mode = mode === "focus" ? "break" : "focus";
+      left = mode === "focus" ? FOCUS : BREAK;
+      ringing = true; beep(); setTimeout(function () { ringing = false; }, 6500);
+    }
+    drawPomo();
+  }
+  function unlockAudio() {
+    // iOS chỉ cho phát âm thanh sau khi người dùng chạm
+    try { if (!audioCtx) { var AC = window.AudioContext || window.webkitAudioContext; if (AC) audioCtx = new AC(); }
+      if (audioCtx && audioCtx.state === "suspended") audioCtx.resume(); } catch (e) {}
+  }
+  $("pStart").addEventListener("click", function () {
+    unlockAudio();
+    if (running) { running = false; clearInterval(pTimer); left = (endAt - Date.now()) / 1000; }
+    else { running = true; endAt = Date.now() + left * 1000; pTimer = setInterval(pomoTick, 250); }
+    drawPomo();
+  }, false);
+  $("pReset").addEventListener("click", function () {
+    running = false; clearInterval(pTimer); left = mode === "focus" ? FOCUS : BREAK; drawPomo();
+  }, false);
+  $("pSwitch").addEventListener("click", function () {
+    running = false; clearInterval(pTimer);
+    mode = mode === "focus" ? "break" : "focus"; left = mode === "focus" ? FOCUS : BREAK; drawPomo();
+  }, false);
+
+  /* ---------- Khởi động ---------- */
+  tick();
+  drawPomo();
+  resetPomoCountIfNewDay();
+  if (city) { loadWeather(); } else { openPicker(); }
+  setInterval(loadWeather, 15 * 60 * 1000);
+
+  // expose for testing
+  window.__lunar = solarToLunar;
+})();
+</script>
+</body>
+</html>
